@@ -1,0 +1,64 @@
+type: modbus
+profile:
+  - id: 111
+    name: em3250
+    register:
+      - id: 111
+        name: input-1
+        start: 0
+        quantity: 1
+        type: float32
+        inverse: true
+        mask: 0
+        catalog: voltage
+        tag: ""
+      - id: 222
+        name: input-2
+        start: 0
+        quantity: 1
+        type: int16
+        mask: 0
+        catalog: temperature
+        tag: ""
+    range:
+      - start: 0
+        end: 10
+      - start: 20
+        end: 20
+      - start: 30
+        end: 40
+        fixed: true
+
+host:
+  - name: "user-define-a"
+    ipaddr: "192.168.0.42"
+    port: 502
+    policy:
+      interval: 10
+      timeout: 1
+      retry: 5
+      concurrency: 2
+      keepalive: true
+    slave:
+    - slaveid: 1
+      name: "power-supply"
+      collection:
+        em5350: [input-1, input-2]
+
+  - name: user-define-b
+    serial: "/dev/ttyUSB0"
+    baud: 115200
+    databits: 8
+    parity: N 
+    stopbits: 1
+    policy:
+      interval: 20
+      timeout: 2
+      retry: 5
+      concurrency: 1
+      keepalive: true
+    slave:
+    - slaveid: 2
+      name: "channel2"
+      collection:
+        em5350: [input-1]  

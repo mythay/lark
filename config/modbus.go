@@ -2,11 +2,7 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"reflect"
-
-	"github.com/influxdata/toml"
 )
 
 type Verifier interface {
@@ -14,27 +10,38 @@ type Verifier interface {
 }
 
 type CfgModbus struct {
-	Type     string
-	Products map[string]CfgProduct
-	Hosts    []CfgHost
+	Type    string
+	Profile []CfgProfile
+	Host    []CfgHost
 }
-type CfgProduct struct {
-	Registers map[string]CfgRegister
-	Ranges    []CfgRange
+type CfgProfile struct {
+	Id       string
+	Name     string
+	Register []CfgRegister
+	Range    []CfgRange
 	// Inverse  bool
 }
 type CfgRegister struct {
-	Base    uint16
-	Type    string
-	Inverse bool
-	Cmd     string
-	Tag     string
+	Id        uint32
+	Name      string
+	Start     uint16
+	Quantity  uint16
+	Type      string
+	Inverse   bool
+	Mask      uint32
+	Catalog   string
+	Condition string
+	Action    string
+	Tag       string
 	//
 	cCount uint16
 	cType  reflect.Type
 	cKind  reflect.Kind
 }
 
+func (reg *CfgRegister) End() uint16 {
+	return reg.Start + reg.Quantity - 1
+}
 func (reg *CfgRegister) Count() uint16 {
 	if reg.cCount == 0 {
 		reg.cCount = uint16(reg.GoType().Size()) / 2
@@ -92,15 +99,12 @@ func (reg *CfgRegister) Verify() (bool, error) {
 	} else {
 		return false, fmt.Errorf(" invalid type'%s'", reg.Type)
 	}
-
-}
-func (reg *CfgRegister) Last() uint16 {
-	return reg.Base + reg.Count()
 }
 
 type CfgRange struct {
 	Start uint16
 	End   uint16
+	Fixed bool
 }
 
 func (rag *CfgRange) Count() uint16 {
@@ -113,44 +117,39 @@ type CfgAddrTcp struct {
 }
 
 type CfgAddrRtu struct {
-	SerialPort string
-	BaudRate   int
-	DataBits   int    // Data bits: 5, 6, 7 or 8 (default 8)
-	StopBits   int    // Stop bits: 1 or 2 (default 1)
-	Parity     string // Parity: N - None, E - Even, O - Odd (default E)
+	Serial   string
+	Baud     int
+	DataBits int    // Data bits: 5, 6, 7 or 8 (default 8)
+	Parity   string // Parity: N - None, E - Even, O - Odd (default E)
+	StopBits int    // Stop bits: 1 or 2 (default 1)
 
 }
 type CfgHost struct {
-	Name     string
-	Interval uint32
-	Address  string
-	CfgAddrTcp
-	CfgAddrRtu
-	Slave []CfgSlave
+	Name   string
+	IpAddr string
+	Port   uint16
+	// CfgAddrTcp
+	// CfgAddrRtu
+	Serial   string
+	Baud     int
+	DataBits int    // Data bits: 5, 6, 7 or 8 (default 8)
+	Parity   string // Parity: N - None, E - Even, O - Odd (default E)
+	StopBits int    // Stop bits: 1 or 2 (default 1)
+
+	Policy CfgPolicy
+	Slave  []CfgSlave
+}
+
+type CfgPolicy struct {
+	Interval    uint32
+	Timeout     uint32
+	Retry       uint8
+	Concurrency uint8
+	KeepAlive   bool
 }
 
 type CfgSlave struct {
 	SlaveId    uint8
-	Product    string
 	Name       string
-	Collection []string
-}
-
-func LoadCfgModbus(path string) (*CfgModbus, error) {
-
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	buf, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-	var config CfgModbus
-	if err := toml.Unmarshal(buf, &config); err != nil {
-		return nil, err
-	}
-	return &config, nil
-
+	Collection map[string][]string
 }

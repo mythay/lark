@@ -1,0 +1,48 @@
+Type="modbus"
+
+# [[device.em3250]]
+[device.em3250.register.input-1]
+Base=0
+Type= "float"
+Cmd= "ReadHolding"
+Tag= "voltage"
+# [[device.em3250]]
+[device.em3250.register.input-2]
+Base=20
+Type= "float"
+Cmd= "ReadHolding"
+Tag= "voltage"
+# [[device.em3250]]
+[device.em3250.register.temp-1]
+Base=15
+Type= "signed"
+Cmd= "ReadHolding"
+Tag= "temperature"
+
+[[device.em3250.range]]
+Base=0
+Count=10
+
+[[device.em3250.range]]
+Base=20
+Count=5
+
+
+[[host]]
+Name="user-define-a"
+Interval=10
+Address= "127.0.0.1"
+Port  =  502
+[[host.slave]]
+SlaveId=1
+Device="em3250"
+Name="power-supply"
+Collect = ["input-1", "input-2"]
+
+[[host.slave]]
+SlaveId=2
+Device="em3250"
+Name="power-supply"
+Collect = ["temp-1"]
+
+
