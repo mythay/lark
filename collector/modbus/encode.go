@@ -1,4 +1,4 @@
-package mbclient
+package modbus
 
 var NormalEndian normalEndian
 

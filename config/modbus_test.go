@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -29,9 +30,15 @@ func TestLoadYamlConfig(t *testing.T) {
 func TestRegTypeAndSize(t *testing.T) {
 
 	assert := assert.New(t)
- 
 
 	reg := CfgRegister{Type: "int16"}
 	assert.Equal(reflect.TypeOf(int16(0)), reg.GoType())
 	assert.EqualValues(1, reg.Count())
+}
+func TestArrayRange(t *testing.T) {
+	arr := []int{1, 2, 3, 4, 5}
+	for i, a := range arr {
+		fmt.Printf("%v, %v, %v\n", a, &a, &arr[i])
+	}
+
 }

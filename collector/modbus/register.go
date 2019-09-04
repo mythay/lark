@@ -1,4 +1,4 @@
-package mbclient
+package modbus
 
 import (
 	"bytes"
@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/mythay/spider"
+	cfg "github.com/mythay/lark/config"
 )
 
 type regValue struct {
-	spider.CfgRegister
+	*cfg.CfgRegister
 	Value interface{}
 	Ts    time.Time
 	name  string
@@ -54,26 +54,3 @@ func (reg *regValue) Parse(data []byte) (interface{}, error) {
 }
 
 // parse response data and store it and time stamp to its own storage
-func (reg *regValue) ParseResponse(resp map[uint16]tsRegValue) {
-	count := reg.Count()
-	var found = true
-	var ts time.Time
-	rawdata := make([]byte, 8)
-	for i := reg.Base; i < reg.Base+count; i++ {
-		if d, ok := resp[i]; ok {
-			rawdata = append(rawdata, d.value[0], d.value[1])
-			ts = d.ts
-		} else {
-			found = false
-			break
-		}
-	}
-	if found {
-		val, err := reg.Parse(rawdata)
-		if err == nil {
-			reg.Value = val
-			reg.Ts = ts
-			// fmt.Printf("%s=%v\n", reg.name, val)
-		}
-	}
-}

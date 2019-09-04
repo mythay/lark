@@ -1,4 +1,4 @@
-package mbclient
+package modbus
 
 import (
 	"bytes"

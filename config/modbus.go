@@ -22,7 +22,7 @@ type CfgProfile struct {
 	// Inverse  bool
 }
 type CfgRegister struct {
-	Id        uint32
+	Id        string
 	Name      string
 	Start     uint16
 	Quantity  uint16
