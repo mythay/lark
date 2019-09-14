@@ -15,14 +15,12 @@ type CfgModbus struct {
 	Host    []CfgHost
 }
 type CfgProfile struct {
-	Id       string
 	Name     string
 	Register []CfgRegister
 	Range    []CfgRange
 	// Inverse  bool
 }
 type CfgRegister struct {
-	Id        string
 	Name      string
 	Start     uint16
 	Quantity  uint16

@@ -10,20 +10,42 @@ import (
 type MbReader interface {
 	ReadHolding(address, quantity uint16) (results []byte, err error)
 }
-type mbRead struct {
+
+type tsValue struct {
+	value [2]byte
+	ts    time.Time
+}
+
+type tsRange struct {
+	value []byte
+	ts    time.Time
+}
+
+func (rag *tsRange) append(val tsValue) {
+	rag.value = append(rag.value, val.value[:]...)
+	if rag.ts.Before(val.ts) {
+		rag.ts = val.ts
+	}
+}
+
+func (rag *tsRange) quantity() uint16 {
+	return uint16(len(rag.value) / 2)
+}
+
+type mbCache struct {
 	data   map[uint16]tsValue
 	rag    rangeSlice
 	reader MbReader
 }
 
-func newRead(rags []*cfg.CfgRange, regs []*cfg.CfgRegister, reader MbReader) (*mbRead, error) {
-	cache := &mbRead{reader: reader}
+func newCache(rags []*cfg.CfgRange, regs []*cfg.CfgRegister, reader MbReader) (*mbCache, error) {
+	cache := &mbCache{reader: reader}
 	for _, rag := range rags {
 		cache.rag = append(cache.rag, readRange{org: *rag})
 	}
 	sort.Sort(cache.rag)
 	for _, reg := range regs {
-		if found := cache.inOrg(cfg.CfgRange{Start: reg.Start, End: reg.End()}); found != nil {
+		if found := cache.locateRange(cfg.CfgRange{Start: reg.Start, End: reg.End()}); found != nil {
 			found.adjustRange(reg)
 		}
 
@@ -32,15 +54,15 @@ func newRead(rags []*cfg.CfgRange, regs []*cfg.CfgRegister, reader MbReader) (*m
 	return cache, nil
 }
 
-func (cache *mbRead) resetData() {
+func (cache *mbCache) resetData() {
 	cache.data = make(map[uint16]tsValue)
 }
 
-func (buf *mbRead) ReadThrough(start, quantity uint16) ([]tsValue, error) {
-	var results []tsValue
+func (buf *mbCache) ReadThrough(start, quantity uint16) (tsRange, error) {
+	var results tsRange
 	// get the best range we can read
 	readRange := cfg.CfgRange{Start: start, End: start + quantity - 1}
-	if found := buf.inOrg(readRange); found != nil {
+	if found := buf.locateRange(readRange); found != nil {
 		if found.valid {
 			readRange = found.calc
 		} else {
@@ -51,7 +73,7 @@ func (buf *mbRead) ReadThrough(start, quantity uint16) ([]tsValue, error) {
 	// read action
 	data, err := buf.reader.ReadHolding(readRange.Start, readRange.Count())
 	if err != nil {
-		return nil, err
+		return results, err
 	}
 
 	// refresh the cache
@@ -59,16 +81,16 @@ func (buf *mbRead) ReadThrough(start, quantity uint16) ([]tsValue, error) {
 		buf.data[start+uint16(j/2)] = tsValue{[2]byte{data[j], data[j+1]}, time.Now()}
 	}
 	for addr := start; addr < start+quantity; addr++ {
-		results = append(results, buf.data[addr])
+		results.append(buf.data[addr])
 	}
 	return results, nil
 }
-func (buf *mbRead) Read(start, quantity uint16) ([]tsValue, error) {
+func (buf *mbCache) Read(start, quantity uint16) (tsRange, error) {
 	inCache := true
-	var results []tsValue
+	var results tsRange
 	for addr := start; addr < start+quantity; addr++ {
 		if v, ok := buf.data[addr]; ok {
-			results = append(results, v)
+			results.append(v)
 		} else {
 			inCache = false
 			break
@@ -83,7 +105,7 @@ func (buf *mbRead) Read(start, quantity uint16) ([]tsValue, error) {
 }
 
 // binary search
-func (buf *mbRead) inOrg(reg cfg.CfgRange) *readRange {
+func (buf *mbCache) locateRange(reg cfg.CfgRange) *readRange {
 	s := buf.rag
 	lo, hi := 0, len(s)-1
 	for lo <= hi {

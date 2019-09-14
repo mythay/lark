@@ -10,14 +10,13 @@ import (
 	cfg "github.com/mythay/lark/config"
 )
 
-type regValue struct {
+type mbReg struct {
 	*cfg.CfgRegister
 	Value interface{}
 	Ts    time.Time
-	name  string
 }
 
-func (reg *regValue) Endian() binary.ByteOrder {
+func (reg *mbReg) Endian() binary.ByteOrder {
 	if reg.Inverse {
 		return InverseEndian
 	} else {
@@ -25,8 +24,34 @@ func (reg *regValue) Endian() binary.ByteOrder {
 	}
 }
 
+func (reg *mbReg) preCondition() bool {
+	return true
+}
+
+func (reg *mbReg) postCondition() bool {
+	return true
+}
+
+func (reg *mbReg) execute(reader *mbCache) bool {
+	if !reg.preCondition() {
+		return false
+	}
+	data, err := reader.Read(reg.Start, reg.Quantity)
+	if err != nil {
+		return false
+	}
+	reg.Value, err = reg.parse(data.value)
+	if err != nil {
+		return false
+	}
+	if !reg.postCondition() {
+		return false
+	}
+	return true
+}
+
 // performance is 10x slower than no reflect function, left it here just for reference
-func (reg *regValue) ReflectParse(data []byte) (interface{}, error) {
+func (reg *mbReg) reflectParse(data []byte) (interface{}, error) {
 	var err error
 	val := reflect.New(reg.GoType())
 
@@ -35,7 +60,7 @@ func (reg *regValue) ReflectParse(data []byte) (interface{}, error) {
 	return val.Elem().Interface(), err
 }
 
-func (reg *regValue) Parse(data []byte) (interface{}, error) {
+func (reg *mbReg) parse(data []byte) (interface{}, error) {
 
 	switch reg.GoKind() {
 	case reflect.Uint16:
@@ -44,6 +69,8 @@ func (reg *regValue) Parse(data []byte) (interface{}, error) {
 		return int16(reg.Endian().Uint16(data)), nil
 	case reflect.Int32:
 		return int32(reg.Endian().Uint32(data)), nil
+	case reflect.Uint32:
+		return uint32(reg.Endian().Uint32(data)), nil
 	case reflect.Float32:
 		return float32(reg.Endian().Uint32(data)), nil
 	case reflect.Float64:

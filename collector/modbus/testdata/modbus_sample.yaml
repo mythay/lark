@@ -1,0 +1,43 @@
+type: modbus
+profile:
+  - name: em3250
+    register:
+      - name: input-1
+        start: 0
+        quantity: 2
+        type: float32
+        inverse: true
+        mask: 0
+        catalog: voltage
+        tag: ""
+      - name: input-2
+        start: 0
+        quantity: 1
+        type: int16
+        mask: 0
+        catalog: temperature
+        tag: ""
+    range:
+      - start: 0
+        end: 10
+      - start: 20
+        end: 20
+      - start: 30
+        end: 40
+        fixed: true
+
+host:
+  - name: "user-define-a"
+    ipaddr: "localhost"
+    port: 5020
+    policy:
+      interval: 10
+      timeout: 1
+      retry: 5
+      concurrency: 2
+      keepalive: true
+    slave:
+    - slaveid: 1
+      name: "power-supply"
+      collection:
+        em3250: [input-1, input-2]
