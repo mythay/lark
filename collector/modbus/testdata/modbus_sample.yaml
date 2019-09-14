@@ -31,8 +31,9 @@ host:
     ipaddr: "localhost"
     port: 5020
     policy:
-      interval: 10
-      timeout: 1
+      interval: 0
+      period: 10
+      timeout: 1000
       retry: 5
       concurrency: 2
       keepalive: true

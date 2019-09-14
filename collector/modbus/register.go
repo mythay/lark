@@ -32,7 +32,7 @@ func (reg *mbReg) postCondition() bool {
 	return true
 }
 
-func (reg *mbReg) execute(reader *mbCache) bool {
+func (reg *mbReg) step(reader *mbCache) bool {
 	if !reg.preCondition() {
 		return false
 	}

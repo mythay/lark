@@ -139,8 +139,9 @@ type CfgHost struct {
 }
 
 type CfgPolicy struct {
-	Interval    uint32
-	Timeout     uint32
+	Interval    uint32 // interval duration between two register group
+	Timeout     uint32 // connect and read timeout
+	Period      uint32 // duration between two loop of reading all the registers
 	Retry       uint8
 	Concurrency uint8
 	KeepAlive   bool
