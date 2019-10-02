@@ -9,7 +9,7 @@ import (
 type mbSlave struct {
 	cfg.CfgSlave
 	parent *mbHost
-	reader *mbCache
+	cache  *mbCache
 	regs   map[string]*mbReg
 }
 
@@ -41,11 +41,15 @@ func createCache(slv *mbSlave, profiles []cfg.CfgProfile) error {
 	if err != nil {
 		return err
 	}
-	slv.reader = reader
+	slv.cache = reader
 	slv.regs = make(map[string]*mbReg)
 
-	for _, reg := range regs {
-		slv.regs[reg.Name] = &mbReg{CfgRegister: reg}
+	for _, cfgReg := range regs {
+		reg, err := NewReg(cfgReg)
+		if err != nil {
+			return err
+		}
+		slv.regs[cfgReg.Name] = reg
 	}
 
 	return nil
@@ -64,24 +68,32 @@ func (slv *mbSlave) ReadHolding(address, quantity uint16) (results []byte, err e
 	return slv.parent.ReadHoldingRegisters(slv.SlaveId, address, quantity)
 }
 
-func (slv *mbSlave) preCondition() bool {
+func (slv *mbSlave) preCollect() bool {
 	return true
 }
 
-func (slv *mbSlave) postCondition() bool {
+func (slv *mbSlave) postCollect() bool {
 	return true
 }
 
-func (slv *mbSlave) step() bool {
-	if !slv.preCondition() {
+func (slv *mbSlave) collect(fnMetric MetricDispatcher) bool {
+	if !slv.preCollect() {
 		return false
 	}
 	for _, v := range slv.regs {
-		v.step(slv.reader)
+		v.collect(slv.cache)
 	}
-	if !slv.postCondition() {
+	if !slv.postCollect() {
 		return false
 	}
-	slv.reader.resetData()
+	// dispatch the data to some other place
+	for _, v := range slv.regs {
+		if v.Value != nil { //has valid value
+			fnMetric("modbus", map[string]interface{}{v.Name: v.Value},
+				v.tags,
+				v.Ts)
+		}
+	}
+	slv.cache.resetData()
 	return true
 }

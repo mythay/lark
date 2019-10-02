@@ -5,15 +5,49 @@ import (
 	"encoding/binary"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	cfg "github.com/mythay/lark/config"
 )
 
+func parseTagString(query string) map[string]string {
+	m := map[string]string{}
+	for query != "" {
+		key := query
+		if i := strings.IndexAny(key, "& "); i >= 0 {
+			key, query = key[:i], key[i+1:]
+		} else {
+			query = ""
+		}
+		if key == "" {
+			continue
+		}
+		value := ""
+		if i := strings.Index(key, "="); i >= 0 {
+			key, value = key[:i], key[i+1:]
+		}
+		if len(key) == 0 || len(value) == 0 {
+			continue
+		}
+
+		m[key] = value
+	}
+	return m
+}
+
 type mbReg struct {
 	*cfg.CfgRegister
 	Value interface{}
 	Ts    time.Time
+
+	tags map[string]string
+}
+
+func NewReg(cfg *cfg.CfgRegister) (*mbReg, error) {
+	reg := &mbReg{CfgRegister: cfg, tags: parseTagString(cfg.Tag)}
+	reg.tags["catalog"] = cfg.Catalog
+	return reg, nil
 }
 
 func (reg *mbReg) Endian() binary.ByteOrder {
@@ -32,7 +66,7 @@ func (reg *mbReg) postCondition() bool {
 	return true
 }
 
-func (reg *mbReg) step(reader *mbCache) bool {
+func (reg *mbReg) collect(reader *mbCache) bool {
 	if !reg.preCondition() {
 		return false
 	}

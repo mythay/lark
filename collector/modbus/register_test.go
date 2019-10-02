@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	cfg "github.com/mythay/lark/config"
+	"github.com/stretchr/testify/assert"
 )
 
 // func TestConnectModbusTcp(t *testing.T) {
@@ -148,4 +149,39 @@ func TestCfgRegister_ReflectParse(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_parseTagString(t *testing.T) {
+	type args struct {
+		query string
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]string
+	}{
+		// TODO: Add test cases.
+		{"one key", args{"a=b"}, map[string]string{"a": "b"}},
+		{"two key", args{"a=b b=c"}, map[string]string{"a": "b", "b": "c"}},
+		{"one key but two value", args{"a=b a=c"}, map[string]string{"a": "c"}},
+		{"user & as split letter", args{"a=b&b=c"}, map[string]string{"a": "b", "b": "c"}},
+		{"key without value", args{"ab="}, map[string]string{}},
+		{"no equal", args{"ab"}, map[string]string{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseTagString(tt.args.query); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseQuery() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_map_user(t *testing.T) {
+	assert := assert.New(t)
+
+	var a map[string]string
+	assert.Nil(a)
+	b := map[string]string{}
+	assert.NotNil(b)
 }

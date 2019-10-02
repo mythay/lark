@@ -9,7 +9,7 @@ profile:
         inverse: true
         mask: 0
         catalog: voltage
-        tag: ""
+        tag: "abc=100 cde=se"
       - name: input-2
         start: 0
         quantity: 1
